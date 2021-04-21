@@ -81,13 +81,17 @@
       <v-dialog v-model="dialog" max-width="500">
         <v-card>
           <v-container>
-            <v-form @submit.prevent="eddEvent">
+            <v-form @submit.prevent="addEvent">
               <v-text-field v-model="name" type="text" label="event name (required)"></v-text-field>
               <v-text-field v-model="details" type="text" label="details"></v-text-field>
-              <v-text-field v-model="start" type="date" label="end (required)"></v-text-field>
+              <v-text-field v-model="start" type="date" label="start (required)"></v-text-field>
+              <v-text-field v-model="end" type="date" label="end (required)"></v-text-field>
+
+              <v-text-field v-model="clock" type="time" label="clock (required)"></v-text-field>
+
               <v-text-field v-model="color" type="color" label="color (click to open color menu)"></v-text-field>
-            <v-btn type="submit" color="#2196F3" class="mr-4"
-                   @click.stop="dialog = false">create event</v-btn>
+              <v-btn type="submit" color="#2196F3" class="mr-4"
+                     @click.stop="dialog = false">create event</v-btn>
             </v-form>
           </v-container>
         </v-card>
@@ -134,6 +138,9 @@
               <form v-if="currentlyEditing !== selectedEvent.id">
                 {{ selectedEvent.details}}
               </form>
+              <form v-if="currentlyEditing !== selectedEvent.id">
+                {{ selectedEvent.clock}}
+              </form>
               <form v-else>
                 <textarea-autosize
                     v-model="selectedEvent.details"
@@ -153,7 +160,7 @@
                 Cancel
               </v-btn>
               <v-btn text v-if="currentlyEditing !== selectedEvent.id"
-              @click.prevent="editEvent(selectedEvent)">Edit  </v-btn>
+                     @click.prevent="editEvent(selectedEvent)">Edit  </v-btn>
               <v-btn text v-else @click.prevent="updateEvent(selectedEvent)">Save</v-btn>
 
             </v-card-actions>
@@ -167,82 +174,85 @@
 <script>
 import { db } from '@/main';
 export  default {
-data: () => ({
-  today: new Date().toISOString().substr(0,10),
-  focus: new Date().toISOString().substr(0,10),
-  type: "month",
-  typeToLabel: {
-    month: "Month",
-    week: "Week",
-    day: "Day",
-    "4day": "4 Days"
-  },
+  data: () => ({
+    today: new Date().toISOString().substr(0,10),
+    focus: new Date().toISOString().substr(0,10),
+    type: "month",
+    typeToLabel: {
+      month: "Month",
+      week: "Week",
+      day: "Day",
+      "4day": "4 Days"
+    },
 
-  name:null,
-  details:null,
-  start:null,
-  end:null,
-  color: "#2196F3",
-  currentlyEditing: null,
-  selectedEvent: {},
-  selectedElement:null ,
-  selectedOpen: false,
-  events:[],
-  dialog: false
-}),
+    name:null,
+    details:null,
+    start:null,
+    end:null,
+    clock:null,
+    color: "#2196F3",
+    currentlyEditing: null,
+    selectedEvent: {},
+    selectedElement:null ,
+    selectedOpen: false,
+    events:[],
+    dialog: false
+  }),
 
 
   mounted() {
-  this.getEvents();
+    this.getEvents();
   },
   methods: {
-  async getEvents(){
-    let snapshot = await db.collection('calEvent').get();
-    let events = [];
-    snapshot.forEach(doc => {
-      let appData = doc.data();
-      appData.id = doc.id;
-      events.push(appData);
-    });
-    this.events = events;
-  },
-    async addEvent(){
-    if (this.name && this.start && this.end){
-      await db.collection('calEvent').add ({
-        name: this.name,
-        details: this.details,
-        start: this.start,
-        end: this.end,
-        color: this.color
+    async getEvents(){
+      let snapshot = await db.collection('calEvent').get();
+      let events = [];
+      snapshot.forEach(doc => {
+        let appData = doc.data();
+        appData.id = doc.id;
+        events.push(appData);
       });
-      this.getEvents();
-      this.name = "";
-      this.details= "";
-      this.start = "";
-      this.end = "";
-      this.color= "#2196F3";
-    }else{
-      alert('Name, start and end date are required');
-    }
+      this.events = events;
+    },
+    async addEvent(){
+      if (this.name && this.start && this.end){
+        await db.collection('calEvent').add ({
+          name: this.name,
+          details: this.details,
+          start: this.start,
+          end: this.end,
+          clock: this.clock,
+          color: this.color
+        });
+        this.getEvents();
+        this.name = "";
+        this.details= "";
+        this.start = "";
+        this.end = "";
+        this.clock= "",
+        this.color= "#2196F3";
+      }else{
+        alert('Name, start and end date are required');
+      }
     },
 
     async updateEvent(ev){
-    await db
-        .collection('calEvent')
-        .doc(this.currentlyEditing)
-        .update({
-          details: ev.details
-    });
-    this.selectedOpen = false;
-    this.currentlyEditing= null;
+      await db
+          .collection('calEvent')
+          .doc(this.currentlyEditing)
+          .update({
+            details: ev.details
+          });
+      this.selectedOpen = false;
+      this.currentlyEditing= null;
     },
     async deleteEvent (ev){
-    await db
-      .collection("calEvent")
-      .doc(ev)
-      .delete();
-    this.selectedOpen=false;
-    this.getEvents();
+      await db
+          .collection("calEvent")
+          .doc(ev)
+          .delete();
+      this.selectedOpen=false;
+      this.getEvents();
     },
 
     viewDay ({ date }) {
@@ -262,7 +272,7 @@ data: () => ({
       this.$refs.calendar.next()
     },
     editEvent (ev){
-    this.currentlyEditing = ev.id;
+      this.currentlyEditing = ev.id;
     },
 
     showEvent ({ nativeEvent, event }) {
